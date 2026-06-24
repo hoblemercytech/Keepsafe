@@ -288,7 +288,7 @@
   </div>
 
   <script>
-    const SIZES = [72, 96, 128, 144, 152, 192, 384, 512];
+    const SIZES = [72, 96, 128, 144, 152, 192, 384, 512,1040];
     const canvases = {};
     let logoImg = null;
 
@@ -376,7 +376,7 @@
         ctx.fill();
 
         if (logoImg) {
-          const padding = size * 0.13;
+          const padding = size * 0.05;
           const logoSize = size - padding * 2;
 
           ctx.drawImage(
