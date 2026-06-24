@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KeepSafe — Offline</title>
+    <!-- ============================================================
+     KEEPSAFE PWA — PASTE INSIDE <head> OF EVERY PAGE
+     ============================================================ -->
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+  
+  <!-- Theme color (browser UI chrome) -->
+  <meta name="theme-color" content="#7C3AED" />
+  
+  <!-- ── iOS Safari PWA support ── -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="KeepSafe" />
+  
+  <!-- iOS icons (generate these from your logo.png) -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png" />
+  <link rel="apple-touch-icon" sizes="144x144" href="/icon-144.png" />
+  <link rel="apple-touch-icon" sizes="120x120" href="/icon-128.png" />
+  
+  <!-- iOS splash screens — prevents white flash on launch -->
+  <meta name="apple-touch-startup-image" href="/icon-512.png" />
+  
+  <!-- Prevent phone number detection -->
+  <meta name="format-detection" content="telephone=no" />
+  
+  <!-- Standard favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/icon-96.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icon-72.png" />
+  <link rel="shortcut icon" href="/icon-192.png" />
+  
+  <!-- Android / Windows tile color -->
+  <meta name="msapplication-TileColor" content="#7C3AED" />
+  <meta name="msapplication-TileImage" content="icon-144.png" />
+  <link rel="manifest" href="/manifest.json"/>
+  <link rel="stylesheet" href="safe-area.css">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%; font-family: 'Segoe UI', Arial, sans-serif;
+      background: #060612; color: #F0F0FF;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px; text-align: center;
+    }
+
+    .container { max-width: 380px; }
+
+    .icon {
+      font-size: 72px; margin-bottom: 24px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: 0.6; transform: scale(0.95); }
+    }
+
+    h1 {
+      font-size: 28px; font-weight: 900;
+      letter-spacing: -0.5px; margin-bottom: 12px;
+    }
+
+    p {
+      font-size: 15px; color: #8080A8;
+      line-height: 1.7; margin-bottom: 32px;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 13px 28px; border-radius: 12px; border: none;
+      background: linear-gradient(135deg, #7C3AED, #5B21B6);
+      color: #fff; font-size: 14px; font-weight: 700;
+      cursor: pointer; text-decoration: none;
+      box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+      transition: all .2s;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 32px rgba(124,58,237,0.6); }
+
+    .status {
+      margin-top: 24px; font-size: 12px; color: #4A4A6A;
+    }
+    .status.online { color: #34D399; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">🔐</div>
+    <h1>You're Offline</h1>
+    <p>
+      KeepSafe needs an internet connection to access your vault.
+      Check your connection and try again.
+    </p>
+    <button class="btn" onclick="tryReconnect()">
+      ↻ Try Again
+    </button>
+    <p class="status" id="status">Waiting for connection…</p>
+  </div>
+
+  <script>
+  
+   // ── SERVICE WORKER REGISTRATION ──
+ if ('serviceWorker' in navigator) {
+   window.addEventListener('load', async () => {
+     try {
+       const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+       console.log('[PWA] Service Worker registered:', reg.scope);
+       
+       // Check for updates
+       reg.addEventListener('updatefound', () => {
+         const newWorker = reg.installing;
+         newWorker.addEventListener('statechange', () => {
+           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+             // New version available — show subtle toast if showToast exists
+             if (typeof showToast === 'function') {
+               showToast('🔄 App updated! Refresh for the latest version.', 'info');
+             }
+           }
+         });
+       });
+     } catch (err) {
+       console.warn('[PWA] Service Worker registration failed:', err);
+     }
+   });
+ }
+ 
+ // ── iOS SAFE AREA FIX ──
+ // Prevents content hiding behind iPhone notch / Dynamic Island
+ document.documentElement.style.setProperty(
+   '--safe-top', 'env(safe-area-inset-top,    0px)'
+ );
+ document.documentElement.style.setProperty(
+   '--safe-bottom', 'env(safe-area-inset-bottom, 0px)'
+ );
+ document.documentElement.style.setProperty(
+   '--safe-left', 'env(safe-area-inset-left,   0px)'
+ );
+ document.documentElement.style.setProperty(
+   '--safe-right', 'env(safe-area-inset-right,  0px)'
+ );
+ 
+ // ── INSTALL PROMPT (Android Chrome) ──
+ let deferredPrompt = null;
+ 
+ window.addEventListener('beforeinstallprompt', e => {
+   e.preventDefault();
+   deferredPrompt = e;
+   // Show install banner after 30s if user hasn't dismissed
+   setTimeout(() => {
+     if (deferredPrompt) showInstallBanner();
+   }, 30000);
+ });
+ 
+ window.addEventListener('appinstalled', () => {
+   deferredPrompt = null;
+   const banner = document.getElementById('pwa-install-banner');
+   if (banner) banner.remove();
+   if (typeof showToast === 'function') {
+     showToast('✅ KeepSafe installed successfully!', 'success');
+   }
+ });
+ 
+ function showInstallBanner() {
+   if (document.getElementById('pwa-install-banner')) return;
+   const banner = document.createElement('div');
+   banner.id = 'pwa-install-banner';
+   banner.style.cssText = `
+      position: fixed;
+      bottom: calc(var(--safe-bottom, 0px) + 80px);
+      left: 16px; right: 16px;
+      background: linear-gradient(135deg, #7C3AED, #5B21B6);
+      border-radius: 16px;
+      padding: 16px 18px;
+      display: flex; align-items: center; gap: 14px;
+      box-shadow: 0 8px 32px rgba(124,58,237,0.5);
+      z-index: 9999;
+      animation: slideUpBanner .4s cubic-bezier(.34,1.56,.64,1);
+      font-family: 'Cabinet Grotesk', sans-serif;
+    `;
+   banner.innerHTML = `
+      <style>
+        @keyframes slideUpBanner {
+          from { opacity:0; transform:translateY(20px) scale(.96); }
+          to   { opacity:1; transform:translateY(0)    scale(1);   }
+        }
+      </style>
+      <div style="font-size:28px;flex-shrink:0;">🔐</div>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:2px;">Install KeepSafe</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.7);">Add to home screen for quick access</div>
+      </div>
+      <button onclick="installPWA()" style="
+        padding:9px 16px; border-radius:10px; border:none;
+        background:rgba(255,255,255,0.2); color:#fff;
+        font-size:13px; font-weight:700; cursor:pointer;
+        font-family:inherit; white-space:nowrap;
+        backdrop-filter:blur(8px);
+      ">Install</button>
+      <button onclick="dismissInstallBanner()" style="
+        width:28px; height:28px; border-radius:8px; border:none;
+        background:rgba(255,255,255,0.15); color:#fff;
+        font-size:16px; cursor:pointer; display:flex;
+        align-items:center; justify-content:center;
+        font-family:inherit; flex-shrink:0;
+      ">×</button>
+    `;
+   document.body.appendChild(banner);
+ }
+ 
+ window.installPWA = async function() {
+   if (!deferredPrompt) return;
+   deferredPrompt.prompt();
+   const { outcome } = await deferredPrompt.userChoice;
+   console.log('[PWA] Install outcome:', outcome);
+   deferredPrompt = null;
+   dismissInstallBanner();
+ };
+ 
+ window.dismissInstallBanner = function() {
+   const banner = document.getElementById('pwa-install-banner');
+   if (banner) {
+     banner.style.animation = 'none';
+     banner.style.opacity = '0';
+     banner.style.transform = 'translateY(20px)';
+     banner.style.transition = 'all .25s ease';
+     setTimeout(() => banner.remove(), 250);
+   }
+ };
+ 
+    function tryReconnect() {
+      if (navigator.onLine) {
+        window.location.href = '/dashboard.html';
+      } else {
+        document.getElementById('status').textContent = 'Still offline. Check your connection.';
+      }
+    }
+
+    window.addEventListener('online', () => {
+      const s = document.getElementById('status');
+      s.textContent = '✅ Back online! Redirecting…';
+      s.className   = 'status online';
+      setTimeout(() => { window.location.href = '/dashboard.html'; }, 1200);
+    });
+
+    window.addEventListener('offline', () => {
+      document.getElementById('status').textContent = 'Waiting for connection…';
+      document.getElementById('status').className = 'status';
+    });
+  </script>
+</body>
+</html>

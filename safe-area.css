@@ -1,0 +1,101 @@
+/* ============================================================
+   KEEPSAFE PWA — SAFE AREA CSS
+   Paste this into your <style> block in dashboard.html and auth.html
+   Fixes content hiding behind iPhone notch / Dynamic Island / home bar
+   ============================================================ */
+
+/* Safe area variables */
+:root {
+  --safe-top:    env(safe-area-inset-top,    0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left,   0px);
+  --safe-right:  env(safe-area-inset-right,  0px);
+}
+
+/* Topbar — push down below notch/Dynamic Island */
+.topbar {
+  padding-top: calc(0px + var(--safe-top));
+  height: calc(64px + var(--safe-top));
+}
+
+/* Sidebar — push top content below notch */
+.sidebar-brand {
+  height: calc(64px + var(--safe-top));
+  padding-top: var(--safe-top);
+}
+
+/* App grid — account for topbar height change */
+.app {
+  grid-template-rows: calc(64px + var(--safe-top)) 1fr;
+}
+
+/* Main content — don't go under home bar */
+.main {
+  padding-bottom: calc(28px + var(--safe-bottom));
+}
+
+/* Mobile bottom bar — sits above home indicator */
+.mobile-bottom-bar {
+  padding-bottom: calc(10px + var(--safe-bottom));
+}
+
+/* Mobile main — extra bottom padding for nav bar + home indicator */
+@media (max-width: 900px) {
+  .main {
+    padding-bottom: calc(100px + var(--safe-bottom));
+  }
+}
+
+/* Toast — above home bar on mobile */
+@media (max-width: 900px) {
+  .toast-notif {
+    bottom: calc(90px + var(--safe-bottom));
+  }
+}
+
+/* Auth page — safe padding on iPhone */
+.auth-right {
+  padding-top:    calc(60px + var(--safe-top));
+  padding-bottom: calc(60px + var(--safe-bottom));
+  padding-left:   calc(40px + var(--safe-left));
+  padding-right:  calc(40px + var(--safe-right));
+}
+
+@media (max-width: 900px) {
+  .auth-right {
+    padding: calc(40px + var(--safe-top)) calc(24px + var(--safe-left)) calc(40px + var(--safe-bottom)) calc(24px + var(--safe-right));
+  }
+}
+
+/* Security overlays — safe area padding */
+.security-overlay {
+  padding-top:    calc(20px + var(--safe-top));
+  padding-bottom: calc(20px + var(--safe-bottom));
+}
+
+/* Modal overlays — safe area on small screens */
+@media (max-width: 900px) {
+  .item-viewer-overlay {
+    padding-bottom: var(--safe-bottom);
+  }
+  .item-viewer {
+    margin-bottom: var(--safe-bottom);
+  }
+  .modal-overlay {
+    padding-top:    calc(20px + var(--safe-top));
+    padding-bottom: calc(20px + var(--safe-bottom));
+  }
+}
+
+/* PWA standalone mode — extra top padding when running as installed app */
+@media (display-mode: standalone) {
+  body {
+    /* Prevent rubber-band scroll showing white background */
+    overscroll-behavior: none;
+  }
+
+  /* Hide browser-only UI hints */
+  .back-link {
+    display: none;
+  }
+}

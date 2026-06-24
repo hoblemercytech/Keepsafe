@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KeepSafe — Personal Digital Vault</title>
+    <!-- ============================================================
+     KEEPSAFE PWA — PASTE INSIDE <head> OF EVERY PAGE
+     ============================================================ -->
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+  
+  <!-- Theme color (browser UI chrome) -->
+  <meta name="theme-color" content="#7C3AED" />
+  
+  <!-- ── iOS Safari PWA support ── -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="KeepSafe" />
+  
+  <!-- iOS icons (generate these from your logo.png) -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png" />
+  <link rel="apple-touch-icon" sizes="144x144" href="/icon-144.png" />
+  <link rel="apple-touch-icon" sizes="120x120" href="/icon-128.png" />
+  
+  <!-- iOS splash screens — prevents white flash on launch -->
+  <meta name="apple-touch-startup-image" href="/icon-512.png" />
+  
+  <!-- Prevent phone number detection -->
+  <meta name="format-detection" content="telephone=no" />
+  
+  <!-- Standard favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/icon-96.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icon-72.png" />
+  <link rel="shortcut icon" href="/icon-192.png" />
+  
+  <!-- Android / Windows tile color -->
+  <meta name="msapplication-TileColor" content="#7C3AED" />
+  <meta name="msapplication-TileImage" content="icon-144.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800;900&family=Syncopate:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="safe-area.css">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #07071A;
+  --surface:  #10102A;
+  --card:     #16163A;
+  --violet:   #7C3AED;
+  --lavender: #A78BFA;
+  --cyan:     #06B6D4;
+  --white:    #F8F8FF;
+  --muted:    #8B8BAD;
+  --border:   rgba(124,58,237,0.25);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Cabinet Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--white);
+  overflow-x: hidden;
+}
+
+/* ── STARS BG ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(167,139,250,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 80% 10%, rgba(6,182,212,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 50% 80%, rgba(124,58,237,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 10% 70%, rgba(167,139,250,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 60%, rgba(6,182,212,0.3) 0%, transparent 100%);
+  background-size: 400px 400px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── NAV ── */
+/* ── NAV SHELL ── */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 60px;
+  height: 68px;
+  background: rgba(7,7,26,0.75);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--border);
+  gap: 32px;
+  
+}
+
+/* ── LOGO ── */
+.nav-logo {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.nav-logoimg {
+  height: 50px;          /* controls logo height — adjust freely */
+  width: auto;           /* preserves aspect ratio */
+  display: block;
+  object-fit: contain;
+  /* subtle drop shadow so logo reads on dark bg */
+  filter: drop-shadow(0 0 8px rgba(124,58,237,0.35));
+  transition: filter .25s;
+}
+
+
+.nav-logo:hover .nav-logoimg {
+  filter: drop-shadow(0 0 14px rgba(167,139,250,0.6));
+}
+
+/* ── LINKS ── */
+.nav-links {
+  display: flex;
+  gap: 36px;
+  list-style: none;
+  margin: 0 auto;   /* keeps links centred between logo and CTA */
+}
+
+.nav-links a {
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  letter-spacing: 0.3px;
+  position: relative;
+  padding-bottom: 2px;
+  transition: color .2s;
+}
+
+/* animated underline on hover */
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  left: 0; bottom: -2px;
+  width: 0; height: 1.5px;
+  background: linear-gradient(90deg, var(--violet), var(--cyan));
+  border-radius: 99px;
+  transition: width .25s ease;
+}
+
+.nav-links a:hover       { color: var(--white); }
+.nav-links a:hover::after { width: 100%; }
+
+/* ── CTA BUTTONS ── */
+.nav-cta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.btn-ghost {
+  padding: 8px 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--white);
+  background: transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color .2s, background .2s, color .2s;
+  white-space: nowrap;
+}
+
+.btn-ghost:hover {
+  border-color: var(--lavender);
+  background: rgba(124,58,237,0.1);
+  color: var(--lavender);
+}
+
+.btn-primary {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--violet), #5B21B6);
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(124,58,237,0.4);
+  transition: box-shadow .2s, transform .15s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 0 32px rgba(124,58,237,0.75);
+  transform: translateY(-1px);
+}
+
+/* ── HAMBURGER (hidden on desktop) ── */
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 36px; height: 36px;
+  padding: 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  order: 3;
+}
+
+.nav-toggle span {
+  display: block;
+  width: 100%; height: 1.5px;
+  background: var(--muted);
+  border-radius: 99px;
+  transition: transform .25s, opacity .2s, background .2s;
+}
+
+.nav-toggle:hover span  { background: var(--white); }
+
+/* open state — animate to ✕ */
+.nav-toggle.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+.nav-toggle.open span:nth-child(2) { opacity: 0; }
+.nav-toggle.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+/* ── HERO ── */
+.hero {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 24px 80px;
+  overflow: hidden;
+}
+
+/* Glow orbs */
+.hero::after {
+  content: '';
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 700px; height: 700px;
+  background: radial-gradient(ellipse, rgba(124,58,237,0.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.orb-cyan {
+  position: absolute;
+  bottom: 10%; right: 5%;
+  width: 400px; height: 400px;
+  background: radial-gradient(ellipse, rgba(6,182,212,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Animated shield */
+.hero-shield {
+  position: relative;
+  width: 120px; height: 120px;
+  margin-bottom: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-shield::before {
+  content: '';
+  position: absolute;
+  inset: -20px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, var(--violet), var(--cyan), var(--lavender), var(--violet));
+  animation: spin 4s linear infinite;
+  opacity: 0.5;
+  filter: blur(12px);
+}
+
+.hero-shield::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 1px solid rgba(167,139,250,0.3);
+  animation: pulse-ring 2.5s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-ring {
+  0%, 100% { transform: scale(1); opacity: .3; }
+  50% { transform: scale(1.1); opacity: .7; }
+}
+
+.hero-shield .shield-inner {
+  position: relative;
+  z-index: 2;
+  width: 90px; height: 90px;
+  background: linear-gradient(145deg, #1E1B2E, #0D0D24);
+  border: 2px solid rgba(167,139,250,0.4);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  color: var(--lavender);
+  box-shadow: 0 0 30px rgba(124,58,237,0.3), inset 0 0 20px rgba(124,58,237,0.1);
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border: 1px solid rgba(167,139,250,0.3);
+  border-radius: 100px;
+  font-family: 'Syncopate', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--lavender);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  background: rgba(124,58,237,0.08);
+}
+
+.hero-badge i { font-size: 9px; color: var(--cyan); }
+
+h1 {
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-weight: 900;
+  font-size: clamp(42px, 7vw, 82px);
+  line-height: 1.05;
+  letter-spacing: -2px;
+  max-width: 800px;
+  margin-bottom: 24px;
+}
+
+h1 .accent-violet { color: var(--lavender); }
+h1 .accent-cyan { color: var(--cyan); }
+
+.hero-sub {
+  font-size: 17px;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 520px;
+  margin-bottom: 44px;
+  font-weight: 400;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 64px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn-large {
+  padding: 14px 32px;
+  font-size: 16px;
+  border-radius: 12px;
+}
+
+.hero-trust {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.trust-item i { color: var(--cyan); font-size: 14px; }
+
+/* ── CATEGORY PILLS (animated scroll) ── */
+.scroll-ticker {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  overflow: hidden;
+  padding: 32px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: rgba(16,16,42,0.5);
+}
+
+.ticker-track {
+  display: flex;
+  gap: 16px;
+  width: max-content;
+  animation: ticker 30s linear infinite;
+}
+
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.ticker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  background: var(--card);
+}
+
+.ticker-item i { font-size: 12px; }
+.ticker-item.t-violet i { color: var(--lavender); }
+.ticker-item.t-cyan i { color: var(--cyan); }
+.ticker-item.t-green i { color: #34D399; }
+.ticker-item.t-red i { color: #F87171; }
+.ticker-item.t-yellow i { color: #FBBF24; }
+.ticker-item.t-pink i { color: #F472B6; }
+
+/* ── FEATURES ── */
+section {
+  position: relative;
+  z-index: 1;
+}
+
+.section-label {
+  font-family: 'Syncopate', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--lavender);
+  margin-bottom: 14px;
+}
+
+.section-title {
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-weight: 900;
+  font-size: clamp(30px, 4vw, 48px);
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  margin-bottom: 16px;
+}
+
+.section-sub {
+  font-size: 16px;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 520px;
+}
+
+.features {
+  padding: 100px 60px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.features-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 64px;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.feat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  transition: border-color .25s, transform .2s, box-shadow .25s;
+  cursor: default;
+}
+
+.feat-card:hover {
+  border-color: rgba(167,139,250,0.5);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(124,58,237,0.15);
+}
+
+.feat-card.featured {
+  grid-column: span 2;
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+  background: linear-gradient(135deg, #1A1040, #0D0D24);
+  border-color: rgba(124,58,237,0.4);
+}
+
+.feat-icon {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.feat-card.featured .feat-icon { margin-bottom: 0; }
+
+.feat-icon.vi { background: rgba(124,58,237,0.2); color: var(--lavender); }
+.feat-icon.cy { background: rgba(6,182,212,0.15); color: var(--cyan); }
+.feat-icon.gr { background: rgba(52,211,153,0.15); color: #34D399; }
+.feat-icon.ye { background: rgba(251,191,36,0.15); color: #FBBF24; }
+.feat-icon.pi { background: rgba(244,114,182,0.15); color: #F472B6; }
+.feat-icon.re { background: rgba(248,113,113,0.15); color: #F87171; }
+
+.feat-title {
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.4px;
+  margin-bottom: 10px;
+}
+
+.feat-desc {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+/* ── HOW IT WORKS ── */
+.how {
+  padding: 100px 60px;
+  background: linear-gradient(180deg, transparent, rgba(124,58,237,0.04), transparent);
+}
+
+.how-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.how-header {
+  text-align: center;
+  margin-bottom: 72px;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  position: relative;
+}
+
+.steps::before {
+  content: '';
+  position: absolute;
+  top: 30px;
+  left: 16.66%;
+  right: 16.66%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--violet), var(--cyan), transparent);
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 32px;
+}
+
+.step-num {
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--violet), #4C1D95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syncopate', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: #fff;
+  margin-bottom: 24px;
+  position: relative;
+  box-shadow: 0 0 30px rgba(124,58,237,0.5);
+  z-index: 1;
+}
+
+.step h3 {
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: -0.4px;
+  margin-bottom: 12px;
+}
+
+.step p {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+/* ── SECURITY STRIP ── */
+.security-strip {
+  max-width: 1100px;
+  margin: 0 auto 100px;
+  padding: 0 60px;
+}
+
+.sec-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.sec-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.sec-card i {
+  font-size: 22px;
+  color: var(--cyan);
+}
+
+.sec-card span {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.sec-card p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* ── CTA ── */
+.cta-section {
+  padding: 100px 60px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.cta-section::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 800px; height: 400px;
+  background: radial-gradient(ellipse, rgba(124,58,237,0.2) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.cta-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.cta-inner h2 {
+  font-weight: 900;
+  font-size: clamp(34px, 5vw, 58px);
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  margin-bottom: 20px;
+}
+
+.cta-inner p {
+  font-size: 16px;
+  color: var(--muted);
+  margin-bottom: 40px;
+  line-height: 1.7;
+}
+
+.cta-btns {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
+  background: rgba(7,7,26,0.5);
+}
+
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.footer-brand .shield-icon {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--violet), var(--cyan));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: #fff;
+}
+
+.footer-brand span {
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: -0.5px;
+}
+
+.footer-brand span em {
+  font-style: normal;
+  color: var(--lavender);
+}
+
+.footer-links {
+  display: flex;
+  gap: 28px;
+  list-style: none;
+}
+
+.footer-links a {
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color .2s;
+}
+
+.footer-links a:hover { color: var(--white); }
+
+.footer-copy {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  nav {
+    padding: 0 24px;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 60px;
+    row-gap: 0;
+  }
+
+  .nav-logo  { padding: 12px 0; }
+  .nav-cta   { display: none; }           /* hidden until menu opens */
+  .nav-toggle { display: flex; }
+
+  .nav-links {
+    /* slide-down drawer */
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+    order: 4;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .3s ease, padding .3s ease;
+    padding: 0;
+    border-top: 1px solid transparent;
+    margin: 0;
+  }
+
+  .nav-links.open {
+    max-height: 320px;
+    padding: 12px 0 16px;
+    border-top-color: var(--border);
+  }
+
+  .nav-links li { width: 100%; }
+
+  .nav-links a {
+    display: block;
+    padding: 11px 4px;
+    font-size: 15px;
+  }
+
+  .nav-links a::after { display: none; }
+
+  /* show CTA inside drawer when open */
+  .nav-links.open ~ .nav-cta {
+    display: flex;
+    width: 100%;
+    order: 5;
+    padding: 4px 0 20px;
+    gap: 10px;
+  }
+
+  .nav-links.open ~ .nav-cta .btn-ghost,
+  .nav-links.open ~ .nav-cta .btn-primary {
+    flex: 1;
+    justify-content: center;
+    padding: 11px 16px;
+  }
+  .features, .how, .security-strip, .cta-section { padding-left: 24px; padding-right: 24px; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .feat-card.featured { grid-column: span 1; flex-direction: column; }
+  .steps { grid-template-columns: 1fr; gap: 40px; }
+  .steps::before { display: none; }
+  .sec-grid { grid-template-columns: repeat(2, 1fr); }
+  footer { padding: 32px 24px; flex-direction: column; align-items: flex-start; }
+}
+
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <img src="logo.png" alt="KeepSafe" class="nav-logoimg"/>
+  </a>
+
+  <!-- hamburger (mobile only) -->
+  <button class="nav-toggle" id="navToggle" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
+
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#security">Security</a></li>
+  </ul>
+
+  <div class="nav-cta">
+    <a href="auth.html" class="btn-ghost">Sign In</a>
+    <a href="auth.html" class="btn-primary">
+      <i class="fa-solid fa-shield-halved"></i> Get Started
+    </a>
+  </div>
+</nav>
+
+
+
+  <!-- HERO -->
+
+  <section class="hero">
+    <div class="orb-cyan"></div>
+
+<div class="hero-shield">
+  <div class="shield-inner">
+    <i class="fa-solid fa-shield-halved"></i>
+  </div>
+</div>
+
+<div class="hero-badge">
+  <i class="fa-solid fa-circle-check"></i>
+  100% Encrypted · 100% Private
+</div>
+
+
+<h1>
+  Your important things.<br/>
+  <span class="accent-violet">Always safe,</span>
+  always <span class="accent-cyan">with you.</span>
+</h1>
+
+<p class="hero-sub">
+  One secure vault for your photos, documents, notes, passwords, videos, and links. Access everything from any device, anytime.
+</p>
+
+<div class="hero-actions">
+  <a href="auth.html" class="btn-primary btn-large">
+    <i class="fa-solid fa-rocket"></i> Start for Free
+  </a>
+  <a href="#features" class="btn-ghost btn-large">
+    <i class="fa-solid fa-play"></i> See how it works
+  </a>
+</div>
+
+<div class="hero-trust">
+  <div class="trust-item"><i class="fa-solid fa-lock"></i> End-to-end encrypted</div>
+  <div class="trust-item"><i class="fa-solid fa-server"></i> 10 GB free storage</div>
+  <div class="trust-item"><i class="fa-solid fa-mobile-screen"></i> Works on all devices</div>
+  <div class="trust-item"><i class="fa-solid fa-credit-card"></i> No credit card needed</div>
+</div>
+
+  </section>
+
+  <!-- TICKER -->
+
+  <div class="scroll-ticker">
+    <div class="ticker-track">
+      <!-- first set -->
+      <div class="ticker-item t-violet"><i class="fa-solid fa-image"></i> Photos</div>
+      <div class="ticker-item t-cyan"><i class="fa-solid fa-file-lines"></i> Documents</div>
+      <div class="ticker-item t-yellow"><i class="fa-solid fa-note-sticky"></i> Notes</div>
+      <div class="ticker-item t-red"><i class="fa-solid fa-video"></i> Videos</div>
+      <div class="ticker-item t-green"><i class="fa-solid fa-link"></i> Links</div>
+      <div class="ticker-item t-pink"><i class="fa-solid fa-envelope"></i> Mails</div>
+      <div class="ticker-item t-violet"><i class="fa-solid fa-key"></i> Passwords</div>
+      <div class="ticker-item t-cyan"><i class="fa-solid fa-music"></i> Audio</div>
+      <div class="ticker-item t-yellow"><i class="fa-solid fa-file-code"></i> Code Snippets</div>
+      <div class="ticker-item t-green"><i class="fa-solid fa-id-card"></i> IDs & Cards</div>
+      <div class="ticker-item t-re"><i class="fa-solid fa-receipt"></i> Receipts</div>
+      <div class="ticker-item t-pink"><i class="fa-solid fa-calendar"></i> Events</div>
+      <!-- duplicate for infinite loop -->
+      <div class="ticker-item t-violet"><i class="fa-solid fa-image"></i> Photos</div>
+      <div class="ticker-item t-cyan"><i class="fa-solid fa-file-lines"></i> Documents</div>
+      <div class="ticker-item t-yellow"><i class="fa-solid fa-note-sticky"></i> Notes</div>
+      <div class="ticker-item t-red"><i class="fa-solid fa-video"></i> Videos</div>
+      <div class="ticker-item t-green"><i class="fa-solid fa-link"></i> Links</div>
+      <div class="ticker-item t-pink"><i class="fa-solid fa-envelope"></i> Mails</div>
+      <div class="ticker-item t-violet"><i class="fa-solid fa-key"></i> Passwords</div>
+      <div class="ticker-item t-cyan"><i class="fa-solid fa-music"></i> Audio</div>
+      <div class="ticker-item t-yellow"><i class="fa-solid fa-file-code"></i> Code Snippets</div>
+      <div class="ticker-item t-green"><i class="fa-solid fa-id-card"></i> IDs & Cards</div>
+      <div class="ticker-item t-re"><i class="fa-solid fa-receipt"></i> Receipts</div>
+      <div class="ticker-item t-pink"><i class="fa-solid fa-calendar"></i> Events</div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+
+  <section id="features">
+    <div class="features">
+      <div class="features-header">
+        <div class="section-label">What you can store</div>
+        <h2 class="section-title">Everything you need,<br/>in one private place.</h2>
+        <p class="section-sub">Stop scattering your important files across apps. KeepSafe is the single vault for every type of thing that matters.</p>
+      </div>
+
+
+  <div class="feature-grid">
+    <div class="feat-card featured">
+      <div class="feat-icon vi"><i class="fa-solid fa-shield-halved"></i></div>
+      <div>
+        <div class="feat-title">Military-grade Encryption</div>
+        <p class="feat-desc">Every item you store is encrypted with AES-256 before it leaves your device. Not even we can read your data. Your vault, your rules — always.</p>
+      </div>
+    </div>
+
+    <div class="feat-card">
+      <div class="feat-icon cy"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+      <div class="feat-title">Secure Cloud Sync</div>
+      <p class="feat-desc">Access your vault from any phone, tablet, or computer. Changes sync instantly across all devices.</p>
+    </div>
+
+    <div class="feat-card">
+      <div class="feat-icon gr"><i class="fa-solid fa-folder-open"></i></div>
+      <div class="feat-title">Smart Organization</div>
+      <p class="feat-desc">Photos, documents, notes, passwords — everything auto-sorted into categories. Find anything in seconds.</p>
+    </div>
+
+    <div class="feat-card">
+      <div class="feat-icon ye"><i class="fa-solid fa-key"></i></div>
+      <div class="feat-title">Password Vault</div>
+      <p class="feat-desc">Generate strong passwords and save them securely. One tap to copy, zero effort to remember.</p>
+    </div>
+    
+
+    <div class="feat-card">
+      <div class="feat-icon pi"><i class="fa-solid fa-bolt"></i></div>
+      <div class="feat-title">Instant Search</div>
+      <p class="feat-desc">Find any file, note, or password across your entire vault instantly with powerful full-text search.</p>
+    </div>
+
+    <div class="feat-card">
+      <div class="feat-icon re"><i class="fa-solid fa-fingerprint"></i></div>
+      <div class="feat-title">Biometric Lock</div>
+      <p class="feat-desc">Unlock with Face ID or fingerprint. Even if your device is lost, your vault stays sealed.</p>
+    </div>
+  </div>
+</div>
+
+
+  </section>
+
+  <!-- HOW IT WORKS -->
+
+  <section id="how" class="how">
+    <div class="how-inner">
+      <div class="how-header">
+        <div class="section-label">How it works</div>
+        <h2 class="section-title">Up and running in 60 seconds.</h2>
+        <p class="section-sub" style="margin:0 auto;">No setup headaches. No technical knowledge needed. Just three steps.</p>
+      </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <h3>Create your vault</h3>
+      <p>Sign up with your email in seconds. Your personal encrypted vault is ready immediately — no credit card required.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <h3>Add your things</h3>
+      <p>Upload photos, paste links, write notes, save passwords. Drag-and-drop or tap to add anything you want to keep safe.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <h3>Access anywhere</h3>
+      <p>Login from any device and get everything back instantly. Switch phones, lose a laptop — your vault never loses a thing.</p>
+    </div>
+  </div>
+</div>
+
+
+  </section>
+
+  <!-- SECURITY -->
+
+  <section id="security">
+    <div class="security-strip">
+      <div class="sec-grid">
+        <div class="sec-card">
+          <i class="fa-solid fa-lock"></i>
+          <span>AES-256 Encryption</span>
+          <p>The same encryption standard used by banks and governments worldwide.</p>
+        </div>
+        <div class="sec-card">
+          <i class="fa-solid fa-eye-slash"></i>
+          <span>Zero Knowledge</span>
+          <p>We cannot see, read, or access your data. Ever. By design.</p>
+        </div>
+        <div class="sec-card">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>Two-Factor Auth</span>
+          <p>Add a second layer of protection to your account with 2FA codes.</p>
+        </div>
+        <div class="sec-card">
+          <i class="fa-solid fa-rotate"></i>
+          <span>Auto Backup</span>
+          <p>Your vault is backed up in real-time across multiple secure servers.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+
+  <section class="cta-section">
+    <div class="cta-inner">
+      <div class="section-label" style="text-align:center;">Start today</div>
+      <h2>Your vault is waiting.<br/><span style="color:var(--lavender)">Free forever.</span></h2>
+      <p>No ads, no selling your data, no tricks. Just a beautifully secure place for the things that matter most to you.</p>
+      <div class="cta-btns">
+        <a href="auth.html" class="btn-primary btn-large">
+          <i class="fa-solid fa-shield-halved"></i> Create Free Vault
+        </a>
+        <a href="auth.html" class="btn-ghost btn-large">Sign In</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+
+  <footer>
+    <a href="index.html" class="footer-brand">
+      <div class="shield-icon"><i class="fa-solid fa-shield-halved"></i></div>
+      <span>Keep<em>Safe</em></span>
+    </a>
+  <ul class="footer-links">
+  <li><a href="policy.html">Privacy Policy</a></li>
+  <li><a href="policy.html">Terms of Service</a></li>
+  <li><a href="policy.html">Security</a></li>
+  <li><a href="mailto:hoblemercyTech@gmail.com">Contact</a></li>
+</ul>
+
+    <p class="footer-copy">© 2026 KeepSafe. All rights reserved.</p>
+  </footer>
+
+<!-- ── JS — hamburger toggle (one small script) ── -->
+<script>
+
+
+ // ── SERVICE WORKER REGISTRATION ──
+ if ('serviceWorker' in navigator) {
+   window.addEventListener('load', async () => {
+     try {
+       const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+       console.log('[PWA] Service Worker registered:', reg.scope);
+       
+       // Check for updates
+       reg.addEventListener('updatefound', () => {
+         const newWorker = reg.installing;
+         newWorker.addEventListener('statechange', () => {
+           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+             // New version available — show subtle toast if showToast exists
+             if (typeof showToast === 'function') {
+               showToast('🔄 App updated! Refresh for the latest version.', 'info');
+             }
+           }
+         });
+       });
+     } catch (err) {
+       console.warn('[PWA] Service Worker registration failed:', err);
+     }
+   });
+ }
+ 
+ // ── iOS SAFE AREA FIX ──
+ // Prevents content hiding behind iPhone notch / Dynamic Island
+ document.documentElement.style.setProperty(
+   '--safe-top', 'env(safe-area-inset-top,    0px)'
+ );
+ document.documentElement.style.setProperty(
+   '--safe-bottom', 'env(safe-area-inset-bottom, 0px)'
+ );
+ document.documentElement.style.setProperty(
+   '--safe-left', 'env(safe-area-inset-left,   0px)'
+ );
+ document.documentElement.style.setProperty(
+   '--safe-right', 'env(safe-area-inset-right,  0px)'
+ );
+ 
+ // ── INSTALL PROMPT (Android Chrome) ──
+ let deferredPrompt = null;
+ 
+ window.addEventListener('beforeinstallprompt', e => {
+   e.preventDefault();
+   deferredPrompt = e;
+   // Show install banner after 30s if user hasn't dismissed
+   setTimeout(() => {
+     if (deferredPrompt) showInstallBanner();
+   }, 30000);
+ });
+ 
+ window.addEventListener('appinstalled', () => {
+   deferredPrompt = null;
+   const banner = document.getElementById('pwa-install-banner');
+   if (banner) banner.remove();
+   if (typeof showToast === 'function') {
+     showToast('✅ KeepSafe installed successfully!', 'success');
+   }
+ });
+ 
+ function showInstallBanner() {
+   if (document.getElementById('pwa-install-banner')) return;
+   const banner = document.createElement('div');
+   banner.id = 'pwa-install-banner';
+   banner.style.cssText = `
+      position: fixed;
+      bottom: calc(var(--safe-bottom, 0px) + 80px);
+      left: 16px; right: 16px;
+      background: linear-gradient(135deg, #7C3AED, #5B21B6);
+      border-radius: 16px;
+      padding: 16px 18px;
+      display: flex; align-items: center; gap: 14px;
+      box-shadow: 0 8px 32px rgba(124,58,237,0.5);
+      z-index: 9999;
+      animation: slideUpBanner .4s cubic-bezier(.34,1.56,.64,1);
+      font-family: 'Cabinet Grotesk', sans-serif;
+    `;
+   banner.innerHTML = `
+      <style>
+        @keyframes slideUpBanner {
+          from { opacity:0; transform:translateY(20px) scale(.96); }
+          to   { opacity:1; transform:translateY(0)    scale(1);   }
+        }
+      </style>
+      <div style="font-size:28px;flex-shrink:0;">🔐</div>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:2px;">Install KeepSafe</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.7);">Add to home screen for quick access</div>
+      </div>
+      <button onclick="installPWA()" style="
+        padding:9px 16px; border-radius:10px; border:none;
+        background:rgba(255,255,255,0.2); color:#fff;
+        font-size:13px; font-weight:700; cursor:pointer;
+        font-family:inherit; white-space:nowrap;
+        backdrop-filter:blur(8px);
+      ">Install</button>
+      <button onclick="dismissInstallBanner()" style="
+        width:28px; height:28px; border-radius:8px; border:none;
+        background:rgba(255,255,255,0.15); color:#fff;
+        font-size:16px; cursor:pointer; display:flex;
+        align-items:center; justify-content:center;
+        font-family:inherit; flex-shrink:0;
+      ">×</button>
+    `;
+   document.body.appendChild(banner);
+ }
+ 
+ window.installPWA = async function() {
+   if (!deferredPrompt) return;
+   deferredPrompt.prompt();
+   const { outcome } = await deferredPrompt.userChoice;
+   console.log('[PWA] Install outcome:', outcome);
+   deferredPrompt = null;
+   dismissInstallBanner();
+ };
+ 
+ window.dismissInstallBanner = function() {
+   const banner = document.getElementById('pwa-install-banner');
+   if (banner) {
+     banner.style.animation = 'none';
+     banner.style.opacity = '0';
+     banner.style.transform = 'translateY(20px)';
+     banner.style.transition = 'all .25s ease';
+     setTimeout(() => banner.remove(), 250);
+   }
+ };
+ 
+ 
+  (function() {
+    const toggle = document.getElementById('navToggle');
+    const links = document.getElementById('navLinks');
+    if (!toggle || !links) return;
+    
+    toggle.addEventListener('click', function() {
+      const open = links.classList.toggle('open');
+      toggle.classList.toggle('open', open);
+      toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+    });
+    
+    // close drawer when a link is clicked
+    links.querySelectorAll('a').forEach(function(a) {
+      a.addEventListener('click', function() {
+        links.classList.remove('open');
+        toggle.classList.remove('open');
+      });
+    });
+  })();
+</script>
+</body>
+</html>
