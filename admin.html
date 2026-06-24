@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KeepSafe — Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800;900&family=Syncopate:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #060612;
+  --surface:   #0D0D25;
+  --card:      #111128;
+  --border:    rgba(124,58,237,0.18);
+  --violet:    #7C3AED;
+  --lavender:  #A78BFA;
+  --cyan:      #06B6D4;
+  --green:     #34D399;
+  --yellow:    #FBBF24;
+  --red:       #F87171;
+  --text:      #F0F0FF;
+  --text-sub:  #8080A8;
+  --text-muted:#4A4A6A;
+  --input-bg:  rgba(255,255,255,0.04);
+  --toggle-bg: rgba(255,255,255,0.05);
+  --shadow:    0 24px 64px rgba(0,0,0,0.6);
+}
+
+html, body {
+  min-height: 100%; font-family: 'Cabinet Grotesk', sans-serif;
+  background: var(--bg); color: var(--text);
+  overflow-x: hidden;
+}
+
+/* ── AMBIENT BG ── */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 50% at 5%  0%,  rgba(124,58,237,0.1) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 95% 100%, rgba(6,182,212,0.07) 0%, transparent 60%);
+}
+body::after {
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(124,58,237,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,58,237,0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* ── ADMIN GATE ── */
+#adminGate {
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.gate-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 22px; padding: 40px 36px;
+  width: 100%; max-width: 400px; text-align: center;
+  position: relative; overflow: hidden;
+  box-shadow: var(--shadow);
+  animation: popIn .4s cubic-bezier(.34,1.56,.64,1);
+}
+.gate-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--violet), var(--cyan));
+}
+@keyframes popIn { from{opacity:0;transform:scale(.9) translateY(16px)} to{opacity:1;transform:scale(1) translateY(0)} }
+
+.gate-icon { font-size: 48px; margin-bottom: 20px; filter: drop-shadow(0 0 16px rgba(124,58,237,0.5)); }
+.gate-card h2 { font-size: 22px; font-weight: 900; margin-bottom: 6px; letter-spacing: -0.5px; }
+.gate-card p  { font-size: 13px; color: var(--text-sub); margin-bottom: 28px; line-height: 1.6; }
+
+.gate-field { margin-bottom: 16px; text-align: left; }
+.gate-field label { display: block; font-size: 12px; font-weight: 700; color: var(--text-sub); margin-bottom: 7px; letter-spacing: 0.5px; text-transform: uppercase; }
+.gate-field input {
+  width: 100%; padding: 12px 16px;
+  background: var(--input-bg); border: 1px solid var(--border);
+  border-radius: 11px; color: var(--text);
+  font-family: inherit; font-size: 14px; outline: none;
+  transition: all .2s;
+}
+.gate-field input:focus { border-color: rgba(124,58,237,0.5); box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+
+.gate-btn {
+  width: 100%; padding: 13px; border: none; border-radius: 12px;
+  background: linear-gradient(135deg, var(--violet), #5B21B6);
+  color: #fff; font-family: inherit; font-size: 14px; font-weight: 700;
+  cursor: pointer; box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+  transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.gate-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 32px rgba(124,58,237,0.55); }
+.gate-error { font-size: 13px; color: var(--red); margin-top: 12px; font-weight: 600; display: none; }
+
+/* ── LAYOUT ── */
+#adminApp { display: none; position: relative; z-index: 1; }
+
+/* ── TOPBAR ── */
+.admin-topbar {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(6,6,18,0.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px; height: 64px;
+}
+.admin-brand { display: flex; align-items: center; gap: 12px; }
+.admin-brand-icon {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: linear-gradient(135deg, var(--violet), #4C1D95);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; box-shadow: 0 0 16px rgba(124,58,237,0.4);
+}
+.admin-brand-name {
+  font-family: 'Syncopate', sans-serif;
+  font-size: 12px; font-weight: 700; letter-spacing: 2px;
+  color: var(--text);
+}
+.admin-brand-badge {
+  font-size: 10px; font-weight: 800; letter-spacing: 1.5px;
+  background: rgba(248,113,113,0.15); color: var(--red);
+  border: 1px solid rgba(248,113,113,0.25);
+  padding: 2px 8px; border-radius: 6px; text-transform: uppercase;
+}
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.admin-user-pill {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 14px 6px 6px;
+  background: var(--toggle-bg); border: 1px solid var(--border);
+  border-radius: 99px; font-size: 13px; color: var(--text-sub);
+}
+.admin-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--violet), #4C1D95);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; color: #fff;
+}
+.signout-btn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 16px; border-radius: 9px;
+  background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2);
+  color: var(--red); font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all .18s; font-family: inherit;
+}
+.signout-btn:hover { background: rgba(248,113,113,0.15); }
+
+/* ── MAIN ── */
+.admin-main { padding: 32px; max-width: 1400px; margin: 0 auto; }
+
+/* ── PAGE HEADER ── */
+.page-header { margin-bottom: 28px; }
+.page-header h1 { font-size: 26px; font-weight: 900; letter-spacing: -0.6px; margin-bottom: 4px; }
+.page-header p  { font-size: 14px; color: var(--text-sub); }
+
+/* ── STATS ── */
+.stats-grid {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 14px; margin-bottom: 28px;
+}
+.stat-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 18px; padding: 20px;
+  position: relative; overflow: hidden;
+  transition: all .22s;
+}
+.stat-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(124,58,237,0.3), transparent);
+}
+.stat-card:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(124,58,237,0.1); border-color: rgba(124,58,237,0.3); }
+.stat-icon {
+  width: 40px; height: 40px; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; margin-bottom: 14px;
+}
+.stat-icon.vi { background: rgba(124,58,237,0.15); color: var(--lavender); }
+.stat-icon.cy { background: rgba(6,182,212,0.12);  color: var(--cyan); }
+.stat-icon.gr { background: rgba(52,211,153,0.12); color: var(--green); }
+.stat-icon.ye { background: rgba(251,191,36,0.12); color: var(--yellow); }
+.stat-val   { font-size: 28px; font-weight: 900; letter-spacing: -1px; color: var(--text); line-height: 1; margin-bottom: 6px; }
+.stat-label { font-size: 12px; color: var(--text-sub); font-weight: 500; }
+
+/* ── TOOLBAR ── */
+.toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; margin-bottom: 16px; flex-wrap: wrap;
+}
+.toolbar-left { display: flex; align-items: center; gap: 10px; flex: 1; }
+.search-box {
+  position: relative; flex: 1; max-width: 360px;
+}
+.search-box i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text-muted); pointer-events: none; }
+.search-box input {
+  width: 100%; padding: 9px 14px 9px 36px;
+  background: var(--input-bg); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); font-family: inherit; font-size: 13px;
+  outline: none; transition: all .2s;
+}
+.search-box input:focus { border-color: rgba(124,58,237,0.5); box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+.search-box input::placeholder { color: var(--text-muted); }
+
+.filter-select {
+  padding: 9px 14px; background: var(--input-bg);
+  border: 1px solid var(--border); border-radius: 10px;
+  color: var(--text); font-family: inherit; font-size: 13px;
+  outline: none; cursor: pointer; transition: all .2s;
+}
+.filter-select:focus { border-color: rgba(124,58,237,0.5); }
+.filter-select option { background: #1A1A3A; }
+
+.toolbar-right { display: flex; align-items: center; gap: 8px; }
+.refresh-btn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 16px; border-radius: 10px;
+  background: var(--toggle-bg); border: 1px solid var(--border);
+  color: var(--text-sub); font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all .18s; font-family: inherit;
+}
+.refresh-btn:hover { border-color: var(--border); color: var(--text); background: rgba(124,58,237,0.08); }
+.export-btn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 16px; border-radius: 10px;
+  background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.25);
+  color: var(--green); font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all .18s; font-family: inherit;
+}
+.export-btn:hover { background: rgba(52,211,153,0.18); }
+
+/* ── TABLE ── */
+.table-wrap {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 18px; overflow: hidden;
+  position: relative;
+}
+.table-wrap::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(124,58,237,0.4), transparent);
+}
+
+table { width: 100%; border-collapse: collapse; }
+thead tr {
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+}
+th {
+  padding: 13px 18px; text-align: left;
+  font-size: 11px; font-weight: 800; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--text-muted);
+  white-space: nowrap;
+}
+th.sortable { cursor: pointer; user-select: none; transition: color .15s; }
+th.sortable:hover { color: var(--lavender); }
+th.sort-asc::after  { content: ' ↑'; color: var(--lavender); }
+th.sort-desc::after { content: ' ↓'; color: var(--lavender); }
+
+tbody tr {
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background .15s;
+  cursor: pointer;
+}
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: rgba(124,58,237,0.06); }
+
+td { padding: 14px 18px; font-size: 13px; color: var(--text); vertical-align: middle; }
+
+.user-cell { display: flex; align-items: center; gap: 12px; }
+.user-av {
+  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 800; color: #fff;
+  background: linear-gradient(135deg, var(--violet), #4C1D95);
+}
+.user-name  { font-weight: 700; color: var(--text); }
+.user-email { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 99px;
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+}
+.badge.active   { background: rgba(52,211,153,0.12); color: var(--green);   border: 1px solid rgba(52,211,153,0.25); }
+.badge.inactive { background: rgba(248,113,113,0.1); color: var(--red);     border: 1px solid rgba(248,113,113,0.2); }
+.badge.new      { background: rgba(251,191,36,0.12); color: var(--yellow);  border: 1px solid rgba(251,191,36,0.25); }
+
+.items-bar {
+  display: flex; align-items: center; gap: 6px;
+}
+.items-count {
+  font-size: 13px; font-weight: 800; color: var(--text);
+}
+.items-mini-bar {
+  flex: 1; height: 4px; background: rgba(255,255,255,0.07);
+  border-radius: 99px; overflow: hidden; max-width: 80px;
+}
+.items-mini-fill {
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, var(--violet), var(--cyan));
+}
+
+.action-btns { display: flex; gap: 6px; }
+.act-btn {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; cursor: pointer; transition: all .15s;
+  border: 1px solid var(--border); background: var(--toggle-bg);
+  color: var(--text-sub);
+}
+.act-btn:hover { border-color: var(--lavender); color: var(--lavender); background: rgba(124,58,237,0.1); }
+.act-btn.danger:hover { border-color: var(--red); color: var(--red); background: rgba(248,113,113,0.1); }
+
+/* ── PAGINATION ── */
+.pagination {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-top: 1px solid var(--border);
+  flex-wrap: wrap; gap: 10px;
+}
+.page-info { font-size: 13px; color: var(--text-sub); }
+.page-btns { display: flex; gap: 6px; }
+.page-btn {
+  width: 34px; height: 34px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  border: 1px solid var(--border); background: var(--toggle-bg);
+  color: var(--text-sub); transition: all .15s; font-family: inherit;
+}
+.page-btn:hover:not(:disabled) { border-color: var(--lavender); color: var(--lavender); }
+.page-btn.active { background: var(--violet); border-color: var(--violet); color: #fff; }
+.page-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── USER DETAIL MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 400;
+  background: rgba(0,0,0,0.75); backdrop-filter: blur(12px);
+  display: none; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.show { display: flex; animation: fadeIn .2s ease; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+.modal-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 22px; width: 100%; max-width: 560px;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: var(--shadow);
+  animation: slideIn .35s cubic-bezier(.34,1.56,.64,1);
+  position: relative; overflow: hidden;
+}
+.modal-card::-webkit-scrollbar { width: 4px; }
+.modal-card::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.3); border-radius: 99px; }
+@keyframes slideIn { from{opacity:0;transform:scale(.9) translateY(20px)} to{opacity:1;transform:scale(1) translateY(0)} }
+.modal-card::before {
+  content: ''; position: sticky; top: 0; left: 0; right: 0; height: 2px; display: block;
+  background: linear-gradient(90deg, var(--violet), var(--cyan));
+}
+
+.modal-inner { padding: 28px; }
+.modal-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
+.modal-user { display: flex; align-items: center; gap: 16px; }
+.modal-av {
+  width: 60px; height: 60px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--violet), #4C1D95);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 900; color: #fff;
+  border: 3px solid rgba(124,58,237,0.3);
+  box-shadow: 0 0 24px rgba(124,58,237,0.3);
+  flex-shrink: 0;
+}
+.modal-name  { font-size: 20px; font-weight: 900; color: var(--text); margin-bottom: 4px; letter-spacing: -0.3px; }
+.modal-email { font-size: 13px; color: var(--text-sub); }
+.modal-close {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--toggle-bg); border: 1px solid var(--border);
+  color: var(--text-sub); font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: all .15s;
+}
+.modal-close:hover { background: rgba(248,113,113,0.12); color: var(--red); border-color: rgba(248,113,113,0.3); }
+
+.modal-section { margin-bottom: 24px; }
+.modal-section h4 {
+  font-size: 11px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 2px; color: var(--text-muted); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.modal-section h4::after { content: ''; height: 1px; flex: 1; background: var(--border); }
+
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.detail-item {
+  background: var(--toggle-bg); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 14px;
+}
+.detail-label { font-size: 11px; color: var(--text-muted); font-weight: 700; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+.detail-val   { font-size: 14px; font-weight: 700; color: var(--text); }
+
+.cat-breakdown { display: flex; flex-direction: column; gap: 8px; }
+.cat-row { display: flex; align-items: center; gap: 10px; }
+.cat-label { font-size: 13px; color: var(--text-sub); width: 90px; flex-shrink: 0; }
+.cat-bar-track { flex: 1; height: 6px; background: rgba(255,255,255,0.07); border-radius: 99px; overflow: hidden; }
+.cat-bar-fill  { height: 100%; border-radius: 99px; }
+.cat-num { font-size: 12px; font-weight: 700; color: var(--text-muted); width: 28px; text-align: right; flex-shrink: 0; }
+
+.modal-actions { display: flex; gap: 10px; margin-top: 8px; }
+.modal-btn {
+  flex: 1; padding: 11px; border-radius: 11px;
+  font-family: inherit; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 7px;
+}
+.modal-btn.email { background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.25); color: var(--cyan); }
+.modal-btn.email:hover { background: rgba(6,182,212,0.2); }
+.modal-btn.danger { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2); color: var(--red); }
+.modal-btn.danger:hover { background: rgba(248,113,113,0.15); }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 28px; right: 28px; z-index: 9999;
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 18px; border-radius: 14px;
+  font-size: 13px; font-weight: 700; color: #fff;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  transform: translateY(80px) scale(.95); opacity: 0;
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1), opacity .3s;
+  max-width: 320px;
+}
+.toast.show { transform: translateY(0) scale(1); opacity: 1; }
+.toast.success { background: linear-gradient(135deg, #065F46, #059669); border: 1px solid rgba(52,211,153,0.3); }
+.toast.error   { background: linear-gradient(135deg, #7F1D1D, #DC2626); border: 1px solid rgba(248,113,113,0.3); }
+.toast.info    { background: linear-gradient(135deg, #4C1D95, #7C3AED); border: 1px solid rgba(124,58,237,0.4); }
+
+/* ── LOADING ── */
+.loading-row td {
+  padding: 48px; text-align: center; color: var(--text-muted); font-size: 14px;
+}
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid rgba(124,58,237,0.2); border-top-color: var(--violet);
+  border-radius: 50%; animation: spin .7s linear infinite;
+  display: inline-block; margin-right: 10px; vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── EMPTY ── */
+.empty-row td { padding: 56px; text-align: center; }
+.empty-icon { font-size: 40px; opacity: 0.4; margin-bottom: 12px; }
+.empty-row h3 { font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+.empty-row p  { font-size: 13px; color: var(--text-muted); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1024px) {
+  .stats-grid { grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 768px) {
+  .admin-main { padding: 20px 16px; }
+  .admin-topbar { padding: 0 16px; }
+  .stats-grid { grid-template-columns: repeat(2,1fr); gap: 10px; }
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar-left { flex-direction: column; }
+  .search-box { max-width: 100%; }
+  .table-wrap { overflow-x: auto; }
+  table { min-width: 700px; }
+  .detail-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .admin-brand-name { display: none; }
+}
+
+  </style>
+</head>
+<body>
+
+<!-- ── ADMIN GATE ── -->
+
+<div id="adminGate">
+  <div class="gate-card">
+    <div class="gate-icon">🛡️</div>
+    <h2>Admin Access</h2>
+    <p>Sign in with your admin credentials to access the KeepSafe control panel.</p>
+    <div class="gate-field">
+      <label>Email</label>
+      <input type="email" id="gateEmail" placeholder="admin@yourdomain.com" autocomplete="email"/>
+    </div>
+    <div class="gate-field">
+      <label>Password</label>
+      <input type="password" id="gatePassword" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="gate-btn" id="gateBtn" onclick="adminLogin()">
+      <i class="fa-solid fa-shield-halved"></i> Enter Admin Panel
+    </button>
+    <div class="gate-error" id="gateError"></div>
+  </div>
+</div>
+
+<!-- ── ADMIN APP ── -->
+
+<div id="adminApp">
+
+  <!-- Topbar -->
+
+  <header class="admin-topbar">
+    <div class="admin-brand">
+      <div class="admin-brand-icon">🔐</div>
+      <span class="admin-brand-name">KEEPSAFE</span>
+      <span class="admin-brand-badge">Admin</span>
+    </div>
+    <div class="topbar-right">
+      <div class="admin-user-pill">
+        <div class="admin-avatar" id="adminAvatar">A</div>
+        <span id="adminEmail" style="font-size:13px;">—</span>
+      </div>
+      <button class="signout-btn" onclick="adminSignOut()">
+        <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+      </button>
+    </div>
+  </header>
+
+  <!-- Main -->
+
+  <div class="admin-main">
+
+
+<!-- Page header -->
+<div class="page-header">
+  <h1>👥 User Management</h1>
+  <p>Monitor and manage all KeepSafe vault users</p>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid" id="statsGrid">
+  <div class="stat-card">
+    <div class="stat-icon vi"><i class="fa-solid fa-users"></i></div>
+    <div class="stat-val" id="stat-users">—</div>
+    <div class="stat-label">Total Users</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon cy"><i class="fa-solid fa-boxes-stacked"></i></div>
+    <div class="stat-val" id="stat-items">—</div>
+    <div class="stat-label">Total Items</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon gr"><i class="fa-solid fa-hard-drive"></i></div>
+    <div class="stat-val" id="stat-storage">—</div>
+    <div class="stat-label">Storage Used</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon ye"><i class="fa-solid fa-user-plus"></i></div>
+    <div class="stat-val" id="stat-new">—</div>
+    <div class="stat-label">New This Month</div>
+  </div>
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <div class="toolbar-left">
+    <div class="search-box">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="userSearch" placeholder="Search by name or email…" oninput="filterUsers(this.value)"/>
+    </div>
+    <select class="filter-select" id="sortSelect" onchange="sortUsers(this.value)">
+      <option value="newest">Newest First</option>
+      <option value="oldest">Oldest First</option>
+      <option value="name">Name A–Z</option>
+      <option value="items">Most Items</option>
+      <option value="storage">Most Storage</option>
+    </select>
+  </div>
+  <div class="toolbar-right">
+    <button class="refresh-btn" onclick="loadUsers()">
+      <i class="fa-solid fa-rotate-right"></i> Refresh
+    </button>
+    <button class="export-btn" onclick="exportCSV()">
+      <i class="fa-solid fa-file-csv"></i> Export CSV
+    </button>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>User</th>
+        <th class="sortable" onclick="sortUsers('name')">Name</th>
+        <th>Joined</th>
+        <th>Status</th>
+        <th>Items</th>
+        <th>Storage</th>
+        <th>Last Login</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="userTable">
+      <tr class="loading-row">
+        <td colspan="8">
+          <div class="spinner"></div> Loading users…
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="pagination" id="pagination" style="display:none;"></div>
+</div>
+
+
+  </div>
+</div>
+
+<!-- ── USER DETAIL MODAL ── -->
+
+<div class="modal-overlay" id="userModal" onclick="handleModalBackdrop(event)">
+  <div class="modal-card">
+    <div class="modal-inner">
+      <div class="modal-head">
+        <div class="modal-user">
+          <div class="modal-av" id="modalAv">U</div>
+          <div>
+            <div class="modal-name"  id="modalName">—</div>
+            <div class="modal-email" id="modalEmail">—</div>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+
+  <div class="modal-section">
+    <h4>Account Details</h4>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <div class="detail-label">User ID</div>
+        <div class="detail-val" id="modalId" style="font-size:11px;word-break:break-all;font-family:monospace;">—</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Joined</div>
+        <div class="detail-val" id="modalJoined">—</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Total Items</div>
+        <div class="detail-val" id="modalItems">—</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Storage Used</div>
+        <div class="detail-val" id="modalStorage">—</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Favourites</div>
+        <div class="detail-val" id="modalFavs">—</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Trashed Items</div>
+        <div class="detail-val" id="modalTrashed">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-section">
+    <h4>Category Breakdown</h4>
+    <div class="cat-breakdown" id="modalCatBreakdown">—</div>
+  </div>
+
+  <div class="modal-section">
+    <h4>Actions</h4>
+    <div class="modal-actions">
+      <button class="modal-btn email" onclick="emailUser()">
+        <i class="fa-solid fa-envelope"></i> Send Email
+      </button>
+      <button class="modal-btn danger" onclick="deleteUserData()">
+        <i class="fa-solid fa-trash"></i> Delete All Data
+      </button>
+    </div>
+  </div>
+</div>
+
+
+  </div>
+</div>
+
+<!-- Toast -->
+
+<div class="toast" id="toast">
+  <i id="toastIcon"></i>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+  const SUPABASE_URL      = 'https://kwxgaoyjbkawerguljtx.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3eGdhb3lqYmthd2VyZ3VsanR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MDI1MTAsImV4cCI6MjA5NzM3ODUxMH0.v39YkkhMsfwBJwPWbSdDjqHRozV9h6FdEhtM5KxakVI';
+
+  // !! IMPORTANT: Add your admin email(s) here
+  const ADMIN_EMAILS = ['hoblemercytech@gmail.com'];
+
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ── STATE ──
+  let allUsers    = [];
+  let filteredUsers = [];
+  let currentPage = 1;
+  const PER_PAGE  = 15;
+  let selectedUser = null;
+
+  const CATS = ['photos','documents','videos','notes','passwords','links','mails','audio'];
+  const CAT_COLORS = {
+    photos:'#60A5FA', documents:'#A78BFA', videos:'#F87171',
+    notes:'#FBBF24',  passwords:'#A78BFA', links:'#34D399',
+    mails:'#06B6D4',  audio:'#F472B6',
+  };
+
+  // ── TOAST ──
+  function showToast(msg, type = 'info') {
+    const el  = document.getElementById('toast');
+    const m   = document.getElementById('toastMsg');
+    const ic  = document.getElementById('toastIcon');
+    m.textContent = msg;
+    el.className  = 'toast show ' + type;
+    ic.className  = type === 'success' ? 'fa-solid fa-circle-check'
+                  : type === 'error'   ? 'fa-solid fa-circle-exclamation'
+                  :                      'fa-solid fa-circle-info';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('show'), 3500);
+  }
+
+  // ── ADMIN LOGIN ──
+  window.adminLogin = async function() {
+    const email    = document.getElementById('gateEmail').value.trim();
+    const password = document.getElementById('gatePassword').value;
+    const errEl    = document.getElementById('gateError');
+    const btn      = document.getElementById('gateBtn');
+
+    errEl.style.display = 'none';
+
+    if (!email || !password) {
+      errEl.textContent   = 'Please fill in both fields.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying…';
+    btn.disabled  = true;
+
+    try {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+
+      // Check admin whitelist
+      if (!ADMIN_EMAILS.includes(data.user.email)) {
+        await sb.auth.signOut();
+        throw new Error('Access denied. This account is not authorised as admin.');
+      }
+
+      // Show app
+      document.getElementById('adminGate').style.display = 'none';
+      document.getElementById('adminApp').style.display  = 'block';
+      document.getElementById('adminAvatar').textContent = data.user.email.charAt(0).toUpperCase();
+      document.getElementById('adminEmail').textContent  = data.user.email;
+
+      await loadUsers();
+
+    } catch(err) {
+      errEl.textContent   = err.message || 'Login failed.';
+      errEl.style.display = 'block';
+      btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Enter Admin Panel';
+      btn.disabled  = false;
+    }
+  };
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('adminGate').style.display !== 'none') {
+      adminLogin();
+    }
+  });
+
+  // ── SIGN OUT ──
+  window.adminSignOut = async function() {
+    await sb.auth.signOut();
+    location.reload();
+  };
+
+  // ── CHECK EXISTING SESSION ──
+  (async function() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session && ADMIN_EMAILS.includes(session.user.email)) {
+      document.getElementById('adminGate').style.display = 'none';
+      document.getElementById('adminApp').style.display  = 'block';
+      document.getElementById('adminAvatar').textContent = session.user.email.charAt(0).toUpperCase();
+      document.getElementById('adminEmail').textContent  = session.user.email;
+      await loadUsers();
+    }
+  })();
+
+  // ── LOAD USERS ──
+  window.loadUsers = async function() {
+    document.getElementById('userTable').innerHTML = `
+      <tr class="loading-row">
+        <td colspan="8"><div class="spinner"></div> Loading users…</td>
+      </tr>`;
+
+    try {
+      // Fetch all profiles
+      const { data: profiles, error: profErr } = await sb
+        .from('keep_profile')
+        .select('id, full_name, email, updated_at');
+
+      if (profErr) throw profErr;
+
+      // Fetch item stats per user
+      const { data: items } = await sb
+        .from('keep_items')
+        .select('user_id, file_size, is_favourite, is_deleted, category');
+
+      // Aggregate per user
+      const statsMap = {};
+      (items || []).forEach(item => {
+        if (!statsMap[item.user_id]) {
+          statsMap[item.user_id] = { total:0, storage:0, favs:0, trashed:0, cats:{} };
+        }
+        const s = statsMap[item.user_id];
+        if (!item.is_deleted) {
+          s.total++;
+          s.storage += item.file_size || 0;
+          if (item.is_favourite) s.favs++;
+          s.cats[item.category] = (s.cats[item.category] || 0) + 1;
+        } else {
+          s.trashed++;
+        }
+      });
+
+      // Build user list
+      allUsers = (profiles || []).map(p => ({
+        ...p,
+        stats: statsMap[p.id] || { total:0, storage:0, favs:0, trashed:0, cats:{} },
+      }));
+
+      filteredUsers = [...allUsers];
+
+      // Global stats
+      const totalItems   = allUsers.reduce((s,u) => s + u.stats.total, 0);
+      const totalStorage = allUsers.reduce((s,u) => s + u.stats.storage, 0);
+      const thisMonth    = allUsers.filter(u => {
+        const d = new Date(u.updated_at);
+        const n = new Date();
+        return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+      }).length;
+
+      document.getElementById('stat-users').textContent   = allUsers.length;
+      document.getElementById('stat-items').textContent   = totalItems;
+      document.getElementById('stat-storage').textContent = formatBytes(totalStorage);
+      document.getElementById('stat-new').textContent     = thisMonth;
+
+      currentPage = 1;
+      renderTable();
+
+    } catch(err) {
+      showToast('Failed to load users: ' + err.message, 'error');
+      document.getElementById('userTable').innerHTML = `
+        <tr class="empty-row">
+          <td colspan="8">
+            <div class="empty-icon">⚠️</div>
+            <h3>Failed to load</h3>
+            <p>${err.message}</p>
+          </td>
+        </tr>`;
+    }
+  };
+
+  // ── RENDER TABLE ──
+  function renderTable() {
+    const tbody = document.getElementById('userTable');
+    const start = (currentPage - 1) * PER_PAGE;
+    const page  = filteredUsers.slice(start, start + PER_PAGE);
+
+    if (filteredUsers.length === 0) {
+      tbody.innerHTML = `
+        <tr class="empty-row">
+          <td colspan="8">
+            <div class="empty-icon">👥</div>
+            <h3>No users found</h3>
+            <p>Try a different search term.</p>
+          </td>
+        </tr>`;
+      document.getElementById('pagination').style.display = 'none';
+      return;
+    }
+
+    const maxItems = Math.max(...filteredUsers.map(u => u.stats.total), 1);
+
+    tbody.innerHTML = page.map(user => {
+      const name    = user.full_name || '—';
+      const initial = (user.full_name || user.email || '?').charAt(0).toUpperCase();
+      const joined  = new Date(user.updated_at).toLocaleDateString([], { day:'numeric', month:'short', year:'numeric' });
+      const pct     = Math.min((user.stats.total / maxItems) * 100, 100);
+      const isNew   = (Date.now() - new Date(user.updated_at)) < 7 * 24 * 60 * 60 * 1000;
+
+      return `
+        <tr onclick="openUserModal('${user.id}')">
+          <td>
+            <div class="user-cell">
+              <div class="user-av">${initial}</div>
+              <div>
+                <div class="user-name">${escHtml(name)}</div>
+                <div class="user-email">${escHtml(user.email || '')}</div>
+              </div>
+            </div>
+          </td>
+          <td style="color:var(--text-sub);font-size:13px;">${escHtml(name)}</td>
+          <td style="color:var(--text-sub);font-size:13px;">${joined}</td>
+          <td>
+            <span class="badge ${isNew ? 'new' : 'active'}">
+              <i class="fa-solid fa-circle" style="font-size:6px;"></i>
+              ${isNew ? 'New' : 'Active'}
+            </span>
+          </td>
+          <td>
+            <div class="items-bar">
+              <span class="items-count">${user.stats.total}</span>
+              <div class="items-mini-bar">
+                <div class="items-mini-fill" style="width:${pct}%"></div>
+              </div>
+            </div>
+          </td>
+          <td style="color:var(--text-sub);font-size:13px;">${formatBytes(user.stats.storage)}</td>
+          <td style="color:var(--text-muted);font-size:12px;">${joined}</td>
+          <td>
+            <div class="action-btns" onclick="event.stopPropagation()">
+              <div class="act-btn" onclick="openUserModal('${user.id}')" title="View details">
+                <i class="fa-solid fa-eye"></i>
+              </div>
+              <div class="act-btn danger" onclick="confirmDeleteUser('${user.id}','${escHtml(name)}')" title="Delete user data">
+                <i class="fa-solid fa-trash"></i>
+              </div>
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+
+    renderPagination();
+  }
+
+  // ── PAGINATION ──
+  function renderPagination() {
+    const total = filteredUsers.length;
+    const pages = Math.ceil(total / PER_PAGE);
+    const el    = document.getElementById('pagination');
+
+    if (pages <= 1) { el.style.display = 'none'; return; }
+    el.style.display = 'flex';
+
+    const start = (currentPage - 1) * PER_PAGE + 1;
+    const end   = Math.min(currentPage * PER_PAGE, total);
+
+    let btns = '';
+    for (let i = 1; i <= pages; i++) {
+      btns += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+    }
+
+    el.innerHTML = `
+      <span class="page-info">Showing ${start}–${end} of ${total} users</span>
+      <div class="page-btns">
+        <button class="page-btn" onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        ${btns}
+        <button class="page-btn" onclick="goPage(${currentPage + 1})" ${currentPage === pages ? 'disabled' : ''}>
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>`;
+  }
+
+  window.goPage = function(p) {
+    const pages = Math.ceil(filteredUsers.length / PER_PAGE);
+    if (p < 1 || p > pages) return;
+    currentPage = p;
+    renderTable();
+    document.querySelector('.table-wrap').scrollIntoView({ behavior:'smooth' });
+  };
+
+  // ── FILTER ──
+  window.filterUsers = function(val) {
+    const q = val.toLowerCase().trim();
+    filteredUsers = q
+      ? allUsers.filter(u =>
+          (u.full_name || '').toLowerCase().includes(q) ||
+          (u.email     || '').toLowerCase().includes(q)
+        )
+      : [...allUsers];
+    currentPage = 1;
+    renderTable();
+  };
+
+  // ── SORT ──
+  window.sortUsers = function(by) {
+    filteredUsers.sort((a,b) => {
+      if (by === 'newest')  return new Date(b.updated_at) - new Date(a.updated_at);
+      if (by === 'oldest')  return new Date(a.updated_at) - new Date(b.updated_at);
+      if (by === 'name')    return (a.full_name||'').localeCompare(b.full_name||'');
+      if (by === 'items')   return b.stats.total   - a.stats.total;
+      if (by === 'storage') return b.stats.storage - a.stats.storage;
+      return 0;
+    });
+    currentPage = 1;
+    renderTable();
+  };
+
+  // ── OPEN USER MODAL ──
+  window.openUserModal = function(userId) {
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) return;
+    selectedUser = user;
+
+    const name    = user.full_name || '—';
+    const initial = (user.full_name || user.email || '?').charAt(0).toUpperCase();
+
+    document.getElementById('modalAv').textContent      = initial;
+    document.getElementById('modalName').textContent    = name;
+    document.getElementById('modalEmail').textContent   = user.email || '—';
+    document.getElementById('modalId').textContent      = user.id;
+    document.getElementById('modalJoined').textContent  = new Date(user.updated_at).toLocaleDateString([], { day:'numeric', month:'long', year:'numeric' });
+    document.getElementById('modalItems').textContent   = user.stats.total;
+    document.getElementById('modalStorage').textContent = formatBytes(user.stats.storage);
+    document.getElementById('modalFavs').textContent    = user.stats.favs;
+    document.getElementById('modalTrashed').textContent = user.stats.trashed;
+
+    // Category breakdown
+    const maxCat = Math.max(...CATS.map(c => user.stats.cats[c] || 0), 1);
+    const catEmojis = {
+      photos:'📷', documents:'📄', videos:'🎬', notes:'📝',
+      passwords:'🔑', links:'🔗', mails:'📧', audio:'🎵'
+    };
+    document.getElementById('modalCatBreakdown').innerHTML = CATS.map(cat => {
+      const count = user.stats.cats[cat] || 0;
+      const pct   = (count / maxCat) * 100;
+      return `
+        <div class="cat-row">
+          <div class="cat-label">${catEmojis[cat]} ${cat.charAt(0).toUpperCase() + cat.slice(1)}</div>
+          <div class="cat-bar-track">
+            <div class="cat-bar-fill" style="width:${pct}%;background:${CAT_COLORS[cat]};"></div>
+          </div>
+          <div class="cat-num">${count}</div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('userModal').classList.add('show');
+  };
+
+  window.closeModal = function() {
+    document.getElementById('userModal').classList.remove('show');
+    selectedUser = null;
+  };
+
+  window.handleModalBackdrop = function(e) {
+    if (e.target.id === 'userModal') closeModal();
+  };
+
+  // ── EMAIL USER ──
+  window.emailUser = function() {
+    if (!selectedUser?.email) return;
+    window.open(`mailto:${selectedUser.email}`, '_blank');
+  };
+
+  // ── DELETE USER DATA ──
+  window.deleteUserData = async function() {
+    if (!selectedUser) return;
+    confirmDeleteUser(selectedUser.id, selectedUser.full_name || selectedUser.email);
+  };
+
+  window.confirmDeleteUser = async function(userId, name) {
+    if (!confirm(`Delete ALL vault data for "${name}"?\n\nThis permanently removes all their items and notifications. Their account remains active.\n\nThis cannot be undone.`)) return;
+
+    try {
+      // Delete items
+      await sb.from('keep_items').delete().eq('user_id', userId);
+      // Delete notifications
+      await sb.from('keep_notifications').delete().eq('user_id', userId);
+
+      showToast(`✅ All data deleted for ${name}`, 'success');
+      closeModal();
+      await loadUsers();
+
+    } catch(err) {
+      showToast('Failed to delete: ' + err.message, 'error');
+    }
+  };
+
+  // ── EXPORT CSV ──
+  window.exportCSV = function() {
+    if (!filteredUsers.length) { showToast('No users to export.', 'error'); return; }
+
+    const rows = [
+      ['Name', 'Email', 'Joined', 'Total Items', 'Storage (bytes)', 'Favourites', 'Trashed'],
+      ...filteredUsers.map(u => [
+        u.full_name || '',
+        u.email || '',
+        new Date(u.updated_at).toLocaleDateString(),
+        u.stats.total,
+        u.stats.storage,
+        u.stats.favs,
+        u.stats.trashed,
+      ])
+    ];
+
+    const csv  = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = `keepsafe-users-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('✅ CSV exported!', 'success');
+  };
+
+  // ── HELPERS ──
+  function formatBytes(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    if (bytes < 1024)       return bytes + ' B';
+    if (bytes < 1024**2)    return (bytes/1024).toFixed(1) + ' KB';
+    if (bytes < 1024**3)    return (bytes/1024**2).toFixed(1) + ' MB';
+    return (bytes/1024**3).toFixed(2) + ' GB';
+  }
+
+  function escHtml(str) {
+    return String(str || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+
+</body>
+</html>
